@@ -6,7 +6,8 @@ Purists, theoreticians and other species will complain this isn't a sound way of
 
 ## TODO
 
-- [ ] github actions: build / memory safety
+- [X] github actions: build
+- [ ] github actions: memory safety
 - [ ] clang format
 - [ ] doc on how to use
 - [ ] doc on working principle

@@ -1,0 +1,17 @@
+name: Presubmit Checks
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  linux-gcc:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        architecture: [32, 64]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: sudo apt-get install gcc-multilib g++-multilib && make
+      - name: test
+        run: ./test
+

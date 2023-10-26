@@ -36,9 +36,9 @@ dudero_ret_t test_known_bad(void) {
     return DUDERO_RET_OK;
 }
 
-#include <stdlib.h>
+#include "randombytes/randombytes.h"
 void fill_random(uint8_t *buf, size_t len) {
-    (void)arc4random_buf(buf, len);
+    (void)randombytes(buf, len); // yolo
 }
 
 dudero_ret_t test_good(void) {
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
         dudero_ret_t ret = test_badbit();
         if (ret != DUDERO_RET_OK) { printf("fail\n"); return -1; }
     }
-    test_printstat_stream();
+    test_printstat_stream(); // TODO: this test should be able to fail and return -1
     printf("pass\n");
     return 0;
 }
