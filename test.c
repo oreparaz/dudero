@@ -69,7 +69,8 @@ dudero_ret_t test_badbit(void) {
     return DUDERO_RET_ERROR;
 }
 
-void test_printstat(void) {
+
+void test_printstat_stream(void) {
     #define HOWMANY (100000)
     #define buffer_len (512)
     int failures = 0;
@@ -78,9 +79,14 @@ void test_printstat(void) {
        fill_random((uint8_t *)buf, buffer_len);
        for (int i=0; i<(buffer_len); i++) {
         if ((i%2)!=0) continue;
-         buf[i] &= 0xEF; // clear ONE bit only in each 32-bit word
+         buf[i] &= 0xEF;
        }
-       if (dudero_check_buffer((uint8_t *)buf, buffer_len) != DUDERO_RET_BAD_RANDOMNESS) {
+
+       dudero_stream_init();
+       for (int i=0; i<buffer_len; i++) {
+        dudero_stream_add(buf[i]);
+       }
+       if (dudero_stream_finish() != DUDERO_RET_BAD_RANDOMNESS) {
         failures++;
        }
     }
@@ -91,12 +97,17 @@ void test_printstat(void) {
     for (int i=0; i<HOWMANY; i++) {
        uint8_t buf[buffer_len] = {0};
        fill_random(buf, sizeof(buf));
-       if (dudero_check_buffer(buf, sizeof buf) != DUDERO_RET_OK) {
+
+       dudero_stream_init();
+       for (int i=0; i<buffer_len; i++) {
+        dudero_stream_add(buf[i]);
+       }
+
+       if (dudero_stream_finish() != DUDERO_RET_OK) {
         false_positive++;
        }
     }
     printf("failed (too sensitive): %d / %d (1 in %d, %2.2f)\n", false_positive, HOWMANY, HOWMANY/false_positive, (double)false_positive*100 / (double)HOWMANY);
-
 }
 
 int main(int argc, char **argv) {
@@ -112,7 +123,7 @@ int main(int argc, char **argv) {
         dudero_ret_t ret = test_badbit();
         if (ret != DUDERO_RET_OK) { printf("fail\n"); return -1; }
     }
-    test_printstat();
+    test_printstat_stream();
     printf("pass\n");
     return 0;
 }
