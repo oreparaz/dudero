@@ -22,3 +22,13 @@ typedef enum {
 // WARNING: rejecting sequences that fail this test will reduce the source entropy!
 //
 dudero_ret_t dudero_check_buffer(const uint8_t *buf, size_t len);
+
+// you need to use either the buffer OR the stream API,
+// mixing them is bad
+//
+// nothing of this is thread safe
+//
+// TODO: this is screaming passing a ctx
+dudero_ret_t dudero_stream_init(void);
+dudero_ret_t dudero_stream_add(uint8_t sample);
+dudero_ret_t dudero_stream_finish(void);
