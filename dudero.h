@@ -9,6 +9,7 @@ typedef enum {
     DUDERO_RET_ERROR, // generic error
     DUDERO_RET_BAD_RANDOMNESS,
     DUDERO_RET_TOO_SHORT, // passed buffer is too short
+    DUDERO_RET_TOO_LONG, // passed buffer is too long (would overflow)
     DUDERO_RET_KNOWN_BAD,
 } dudero_ret_t;
 
