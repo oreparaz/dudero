@@ -107,7 +107,11 @@ void test_printstat_stream(void) {
         false_positive++;
        }
     }
-    printf("failed (too sensitive): %d / %d (1 in %d, %2.2f)\n", false_positive, HOWMANY, HOWMANY/false_positive, (double)false_positive*100 / (double)HOWMANY);
+    if (false_positive > 0) {
+        printf("failed (too sensitive): %d / %d (1 in %d, %2.2f%%)\n", false_positive, HOWMANY, HOWMANY/false_positive, (double)false_positive*100 / (double)HOWMANY);
+    } else {
+        printf("failed (too sensitive): %d / %d (no false positives)\n", false_positive, HOWMANY);
+    }
 }
 
 int main(int argc, char **argv) {
