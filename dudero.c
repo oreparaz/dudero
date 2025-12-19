@@ -7,10 +7,19 @@ uint16_t hist[16] = {0}; // count up to 2^16 = 65 536
 size_t hist_samples = 0;
 
 #define MIN_LEN (16)
+// Maximum safe length to prevent overflow of uint16_t histogram bins.
+// Each byte produces 2 nibbles. With perfect uniform distribution,
+// each bin gets len*2/16 = len/8 samples. To keep bins < 2^16:
+// len/8 < 2^16 => len < 2^19 = 524,288 bytes.
+// Use a conservative limit to handle non-uniform data.
+#define MAX_LEN (32768)  // 32 KB
 
 dudero_ret_t dudero_check_buffer(const uint8_t *buf, size_t len) {
     if (len < MIN_LEN) {
         return DUDERO_RET_TOO_SHORT;
+    }
+    if (len > MAX_LEN) {
+        return DUDERO_RET_TOO_LONG;
     }
 
     dudero_stream_init();
@@ -31,9 +40,14 @@ dudero_ret_t dudero_stream_init(void) {
 }
 
 dudero_ret_t dudero_stream_add(uint8_t sample) {
+    // Check if adding this sample would exceed maximum safe samples
+    // MAX_LEN bytes * 2 nibbles/byte = MAX_LEN * 2 samples
+    if (hist_samples >= MAX_LEN * 2) {
+        return DUDERO_RET_TOO_LONG;
+    }
     hist[sample >> 4]++;
     hist[sample&0x0F]++;
-    hist_samples += 2; // TODO: check this isn't larger than 2^16
+    hist_samples += 2;
     return DUDERO_RET_OK;
 }
 
