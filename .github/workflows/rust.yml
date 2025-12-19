@@ -18,7 +18,7 @@ jobs:
       - name: Run dudero.rs tests (with std)
         run: |
           cd rust
-          rustc --test dudero.rs --cfg feature="std" -o test_dudero
+          rustc --test dudero.rs --cfg 'feature="std"' -o test_dudero
           ./test_dudero
 
       - name: Check no_std compilation
