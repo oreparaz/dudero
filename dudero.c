@@ -58,6 +58,9 @@ dudero_ret_t dudero_stream_finish(void) {
     //
     // Threshold = 50.0 corresponds to FPR ≈ 1.2e-5 (approximately 1 in 83,000)
     //
+    // Note: AIS-31 Test 2 (also known as the "Poker test") uses a threshold
+    // of 46.17 for comparison.
+    //
     // This means truly random data will be rejected approximately once in
     // every 83,000 tests. This FPR is constant regardless of buffer size,
     // which is a fundamental property of the chi-squared test.
