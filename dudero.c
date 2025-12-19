@@ -2,9 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-uint16_t hist[16] = {0}; // count up to 2^16 = 65 536
-size_t hist_samples = 0;
+#include <string.h>
 
 #define MIN_LEN (16)
 // Maximum safe length to prevent overflow of uint16_t histogram bins.
@@ -22,44 +20,42 @@ dudero_ret_t dudero_check_buffer(const uint8_t *buf, size_t len) {
         return DUDERO_RET_TOO_LONG;
     }
 
-    dudero_stream_init();
+    dudero_ctx_t ctx;
+    dudero_stream_init(&ctx);
 
     for (size_t i=0; i<len; i++) {
-        dudero_stream_add(buf[i]);
+        dudero_stream_add(&ctx, buf[i]);
     }
 
-    return dudero_stream_finish();
+    return dudero_stream_finish(&ctx);
 }
 
-dudero_ret_t dudero_stream_init(void) {
-    for (size_t i=0; i<16; i++) {
-        hist[i] = 0;
-    }
-    hist_samples = 0;
-    return DUDERO_RET_OK;
+void dudero_stream_init(dudero_ctx_t *ctx) {
+    memset(ctx->hist, 0, sizeof(ctx->hist));
+    ctx->hist_samples = 0;
 }
 
-dudero_ret_t dudero_stream_add(uint8_t sample) {
+dudero_ret_t dudero_stream_add(dudero_ctx_t *ctx, uint8_t sample) {
     // Check if adding this sample would exceed maximum safe samples
     // MAX_LEN bytes * 2 nibbles/byte = MAX_LEN * 2 samples
-    if (hist_samples >= MAX_LEN * 2) {
+    if (ctx->hist_samples >= MAX_LEN * 2) {
         return DUDERO_RET_TOO_LONG;
     }
-    hist[sample >> 4]++;
-    hist[sample&0x0F]++;
-    hist_samples += 2;
+    ctx->hist[sample >> 4]++;
+    ctx->hist[sample & 0x0F]++;
+    ctx->hist_samples += 2;
     return DUDERO_RET_OK;
 }
 
-dudero_ret_t dudero_stream_finish(void) {
-    if (hist_samples < 16) {
+dudero_ret_t dudero_stream_finish(dudero_ctx_t *ctx) {
+    if (ctx->hist_samples < 16) {
         return DUDERO_RET_TOO_SHORT;
     }
     // TODO: handle rounding if len isn't multiple of 8
-    int expected = hist_samples / 16;
+    int expected = ctx->hist_samples / 16;
     uint32_t cum = 0;
     for (size_t i=0; i<16; i++) {
-        uint32_t delta = (hist[i] > expected) ? hist[i]-expected : expected-hist[i];
+        uint32_t delta = (ctx->hist[i] > expected) ? ctx->hist[i]-expected : expected-ctx->hist[i];
         cum += delta*delta;
     }
     double cum_norm = (double)cum / (double)expected;

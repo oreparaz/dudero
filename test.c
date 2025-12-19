@@ -82,11 +82,12 @@ void test_printstat_stream(void) {
          buf[i] &= 0xEF;
        }
 
-       dudero_stream_init();
+       dudero_ctx_t ctx;
+       dudero_stream_init(&ctx);
        for (int i=0; i<buffer_len; i++) {
-        dudero_stream_add(buf[i]);
+        dudero_stream_add(&ctx, buf[i]);
        }
-       if (dudero_stream_finish() != DUDERO_RET_BAD_RANDOMNESS) {
+       if (dudero_stream_finish(&ctx) != DUDERO_RET_BAD_RANDOMNESS) {
         failures++;
        }
     }
@@ -98,12 +99,13 @@ void test_printstat_stream(void) {
        uint8_t buf[buffer_len] = {0};
        fill_random(buf, sizeof(buf));
 
-       dudero_stream_init();
+       dudero_ctx_t ctx;
+       dudero_stream_init(&ctx);
        for (int i=0; i<buffer_len; i++) {
-        dudero_stream_add(buf[i]);
+        dudero_stream_add(&ctx, buf[i]);
        }
 
-       if (dudero_stream_finish() != DUDERO_RET_OK) {
+       if (dudero_stream_finish(&ctx) != DUDERO_RET_OK) {
         false_positive++;
        }
     }
