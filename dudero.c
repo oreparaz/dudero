@@ -46,8 +46,29 @@ dudero_ret_t dudero_stream_finish(void) {
         cum += delta*delta;
     }
     double cum_norm = (double)cum / (double)expected;
-    double thres = 45.0;
-  
+
+    // Chi-squared goodness-of-fit test with 15 degrees of freedom (16 bins - 1)
+    //
+    // cum_norm = Σ(Oi - E)² / E = χ² statistic
+    //
+    // For uniform random nibbles, χ² follows chi-squared distribution with df=15.
+    // The threshold determines the false positive rate (FPR):
+    //
+    //   FPR = P(χ² > threshold | data is truly random)
+    //
+    // Threshold = 50.0 corresponds to FPR ≈ 1.2e-5 (approximately 1 in 83,000)
+    //
+    // This means truly random data will be rejected approximately once in
+    // every 83,000 tests. This FPR is constant regardless of buffer size,
+    // which is a fundamental property of the chi-squared test.
+    //
+    // Mathematical justification:
+    //   P(χ² > 50.0 | df=15) = 1 - γ(7.5, 25) / Γ(7.5) ≈ 1.2e-5
+    //
+    // where γ is the lower incomplete gamma function and Γ is the gamma function.
+    // See auxiliary/verify_threshold.py for complete derivation and numerical verification.
+    double thres = 50.0;
+
     if (cum_norm > thres) {
         return DUDERO_RET_BAD_RANDOMNESS;
     }
