@@ -15,11 +15,16 @@ jobs:
           profile: minimal
           override: true
 
-      - name: Run dudero.rs tests
+      - name: Run dudero.rs tests (with std)
         run: |
           cd rust
-          rustc --test dudero.rs -o test_dudero
+          rustc --test dudero.rs --cfg 'feature="std"' -o test_dudero
           ./test_dudero
+
+      - name: Check no_std compilation
+        run: |
+          cd rust
+          rustc --crate-type lib dudero.rs -o libdudero.rlib
 
       - name: Build example
         run: |

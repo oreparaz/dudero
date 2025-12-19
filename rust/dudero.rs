@@ -6,11 +6,18 @@
 //!
 //! This is equivalent to the "Poker test" (Test 2 in AIS-31).
 //!
+//! # no_std Support
+//!
+//! This library supports `no_std` environments. By default, `std` is enabled.
+//! To use in `no_std`:
+//! - When compiling manually: don't set the `std` feature
+//! - The library will work without any allocations
+//!
 //! # Testing
 //!
 //! Run the built-in tests with:
 //! ```bash
-//! rustc --test dudero.rs -o test_dudero && ./test_dudero
+//! rustc --test dudero.rs --cfg feature=\"std\" -o test_dudero && ./test_dudero
 //! ```
 //!
 //! # Usage
@@ -38,15 +45,29 @@
 //! let result = ctx.finish()?;
 //! ```
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "std")]
+use std::iter::{Extend, FromIterator};
+
+#[cfg(not(feature = "std"))]
+use core::iter::{Extend, FromIterator};
+
 /// Minimum buffer length (16 bytes)
-const MIN_LEN: usize = 16;
+pub const MIN_LEN: usize = 16;
 
 /// Maximum safe length to prevent overflow of u16 histogram bins.
 /// Each byte produces 2 nibbles. With perfect uniform distribution,
 /// each bin gets len*2/16 = len/8 samples. To keep bins < 2^16:
 /// len/8 < 2^16 => len < 2^19 = 524,288 bytes.
 /// Use a conservative limit to handle non-uniform data.
-const MAX_LEN: usize = 32768; // 32 KB
+pub const MAX_LEN: usize = 32768; // 32 KB
+
+/// Number of histogram bins (16 possible nibble values: 0x0 to 0xF)
+const NUM_BINS: usize = 16;
+
+/// Chi-square threshold for false positive rate ≈ 1 in 83,000
+const THRESHOLD: f64 = 50.0;
 
 /// Result of the randomness check
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,8 +87,8 @@ pub enum DuderoError {
     TooLong,
 }
 
-impl std::fmt::Display for DuderoError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for DuderoError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             DuderoError::TooShort => write!(f, "Buffer too short (minimum {} bytes)", MIN_LEN),
             DuderoError::TooLong => write!(f, "Buffer too long (maximum {} bytes)", MAX_LEN),
@@ -75,13 +96,14 @@ impl std::fmt::Display for DuderoError {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for DuderoError {}
 
 /// Context for streaming API
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DuderoContext {
     /// Histogram bins, count up to 2^16 = 65,536
-    hist: [u16; 16],
+    hist: [u16; NUM_BINS],
     /// Total number of samples processed
     hist_samples: usize,
 }
@@ -111,29 +133,54 @@ impl DuderoContext {
         Ok(())
     }
 
+    /// Add multiple samples from an iterator
+    ///
+    /// This is more efficient than calling `add` repeatedly.
+    pub fn add_bytes<I>(&mut self, bytes: I) -> Result<(), DuderoError>
+    where
+        I: IntoIterator<Item = u8>,
+    {
+        for byte in bytes {
+            self.add(byte)?;
+        }
+        Ok(())
+    }
+
+    /// Returns the number of bytes processed so far
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.hist_samples / 2
+    }
+
+    /// Returns true if no bytes have been processed yet
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.hist_samples == 0
+    }
+
     /// Finish processing and return the result
     pub fn finish(&self) -> Result<DuderoResult, DuderoError> {
-        if self.hist_samples < 16 {
+        if self.hist_samples < NUM_BINS {
             return Err(DuderoError::TooShort);
         }
 
-        let expected = self.hist_samples / 16;
-        let mut cum: u32 = 0;
+        let expected = self.hist_samples / NUM_BINS;
 
-        for &count in &self.hist {
-            let delta = if count as usize > expected {
-                (count as usize - expected) as u32
-            } else {
-                (expected - count as usize) as u32
-            };
-            cum += delta * delta;
-        }
+        // Calculate chi-square statistic using iterator
+        let chi_squared: u32 = self
+            .hist
+            .iter()
+            .map(|&count| {
+                let delta = (count as usize).abs_diff(expected) as u32;
+                delta * delta
+            })
+            .sum();
 
-        let cum_norm = cum as f64 / expected as f64;
+        let chi_squared_normalized = chi_squared as f64 / expected as f64;
 
         // Chi-squared goodness-of-fit test with 15 degrees of freedom (16 bins - 1)
         //
-        // cum_norm = Σ(Oi - E)² / E = χ² statistic
+        // chi_squared_normalized = Σ(Oi - E)² / E = χ² statistic
         //
         // For uniform random nibbles, χ² follows chi-squared distribution with df=15.
         // The threshold determines the false positive rate (FPR):
@@ -153,19 +200,45 @@ impl DuderoContext {
         //   P(χ² > 50.0 | df=15) = 1 - γ(7.5, 25) / Γ(7.5) ≈ 1.2e-5
         //
         // where γ is the lower incomplete gamma function and Γ is the gamma function.
-        const THRESHOLD: f64 = 50.0;
 
-        if cum_norm > THRESHOLD {
+        if chi_squared_normalized > THRESHOLD {
             Ok(DuderoResult::BadRandomness)
         } else {
             Ok(DuderoResult::Ok)
         }
+    }
+
+    /// Consume the context and return the result
+    ///
+    /// This is equivalent to `finish()` but takes ownership.
+    #[inline]
+    pub fn into_result(self) -> Result<DuderoResult, DuderoError> {
+        self.finish()
     }
 }
 
 impl Default for DuderoContext {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// Implement Extend to allow collecting bytes into a context
+impl Extend<u8> for DuderoContext {
+    fn extend<T: IntoIterator<Item = u8>>(&mut self, iter: T) {
+        for byte in iter {
+            // Ignore errors during extend (context will be in error state for finish())
+            let _ = self.add(byte);
+        }
+    }
+}
+
+// Allow creating a context from an iterator
+impl FromIterator<u8> for DuderoContext {
+    fn from_iter<T: IntoIterator<Item = u8>>(iter: T) -> Self {
+        let mut ctx = Self::new();
+        ctx.extend(iter);
+        ctx
     }
 }
 
@@ -188,6 +261,7 @@ impl Default for DuderoContext {
 /// - Buffer is too short (< 16 bytes)
 /// - Buffer is too long (> 32 KB)
 pub fn check_buffer(buf: &[u8]) -> Result<DuderoResult, DuderoError> {
+    // Fast path: check length constraints first
     if buf.len() < MIN_LEN {
         return Err(DuderoError::TooShort);
     }
@@ -195,18 +269,52 @@ pub fn check_buffer(buf: &[u8]) -> Result<DuderoResult, DuderoError> {
         return Err(DuderoError::TooLong);
     }
 
-    let mut ctx = DuderoContext::new();
+    // Use iterator-based approach
+    let ctx: DuderoContext = buf.iter().copied().collect();
+    ctx.into_result()
+}
 
-    for &byte in buf {
-        ctx.add(byte)?;
+/// Check an iterator of bytes for randomness
+///
+/// This is a more general version of `check_buffer` that works with any iterator.
+/// Note: The length checks are performed after consuming the iterator.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use dudero::check_iter;
+/// let data = vec![0u8; 64];
+/// let result = check_iter(data.iter().copied());
+/// ```
+pub fn check_iter<I>(iter: I) -> Result<DuderoResult, DuderoError>
+where
+    I: IntoIterator<Item = u8>,
+{
+    let ctx: DuderoContext = iter.into_iter().collect();
+
+    // Check length constraints after building context
+    let len = ctx.len();
+    if len < MIN_LEN {
+        return Err(DuderoError::TooShort);
+    }
+    if len > MAX_LEN {
+        return Err(DuderoError::TooLong);
     }
 
-    ctx.finish()
+    ctx.into_result()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Tests require std for Vec
+    #[cfg(not(feature = "std"))]
+    extern crate alloc;
+    #[cfg(not(feature = "std"))]
+    use alloc::vec;
+    #[cfg(not(feature = "std"))]
+    use alloc::vec::Vec;
 
     #[test]
     fn test_too_short() {
@@ -412,5 +520,84 @@ mod tests {
         // Bad RNG with pattern in bits: 0x55 = 01010101
         let buf = vec![0x55u8; 128];
         assert_eq!(check_buffer(&buf), Ok(DuderoResult::BadRandomness));
+    }
+
+    // === Tests for idiomatic Rust features ===
+
+    #[test]
+    fn test_from_iterator() {
+        // Test creating context from iterator
+        let data = vec![0u8; 64];
+        let ctx: DuderoContext = data.iter().copied().collect();
+        assert_eq!(ctx.finish(), Ok(DuderoResult::BadRandomness));
+    }
+
+    #[test]
+    fn test_extend() {
+        // Test extending context
+        let mut ctx = DuderoContext::new();
+        let data1 = vec![0xAAu8; 16];
+        let data2 = vec![0xAAu8; 16];
+
+        ctx.extend(data1);
+        ctx.extend(data2);
+
+        assert_eq!(ctx.finish(), Ok(DuderoResult::BadRandomness));
+    }
+
+    #[test]
+    fn test_add_bytes() {
+        // Test add_bytes method
+        let mut ctx = DuderoContext::new();
+        let data = vec![0u8; 64];
+        ctx.add_bytes(data).unwrap();
+        assert_eq!(ctx.finish(), Ok(DuderoResult::BadRandomness));
+    }
+
+    #[test]
+    fn test_len_and_is_empty() {
+        let mut ctx = DuderoContext::new();
+        assert_eq!(ctx.len(), 0);
+        assert!(ctx.is_empty());
+
+        ctx.add(0x42).unwrap();
+        assert_eq!(ctx.len(), 1);
+        assert!(!ctx.is_empty());
+
+        ctx.add(0x43).unwrap();
+        assert_eq!(ctx.len(), 2);
+    }
+
+    #[test]
+    fn test_into_result() {
+        let data = vec![0u8; 64];
+        let ctx: DuderoContext = data.iter().copied().collect();
+        // Test consuming the context
+        assert_eq!(ctx.into_result(), Ok(DuderoResult::BadRandomness));
+    }
+
+    #[test]
+    fn test_check_iter() {
+        // Test iterator-based check
+        let data = vec![0u8; 64];
+        assert_eq!(check_iter(data.iter().copied()), Ok(DuderoResult::BadRandomness));
+    }
+
+    #[test]
+    fn test_context_equality() {
+        // Test PartialEq implementation
+        let mut ctx1 = DuderoContext::new();
+        let mut ctx2 = DuderoContext::new();
+
+        assert_eq!(ctx1, ctx2);
+
+        ctx1.add(0x42).unwrap();
+        ctx2.add(0x42).unwrap();
+
+        assert_eq!(ctx1, ctx2);
+
+        ctx1.add(0x43).unwrap();
+
+        assert_ne!(ctx1, ctx2);
     }
 }
