@@ -1,3 +1,6 @@
+// dudero: dude, is my randomness OK?
+// https://github.com/oreparaz/dudero
+
 #include "dudero.h"
 
 #include <stdint.h>

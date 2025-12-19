@@ -1,0 +1,32 @@
+name: Rust Tests
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  rust-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Run dudero.rs tests
+        run: |
+          cd rust
+          rustc --test dudero.rs -o test_dudero
+          ./test_dudero
+
+      - name: Build example
+        run: |
+          cd rust
+          rustc example_dudero.rs --edition 2021 -o example
+
+      - name: Run example
+        run: |
+          cd rust
+          ./example
