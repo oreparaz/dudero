@@ -38,6 +38,9 @@ dudero_ret_t dudero_stream_add(uint8_t sample) {
 }
 
 dudero_ret_t dudero_stream_finish(void) {
+    if (hist_samples < 16) {
+        return DUDERO_RET_TOO_SHORT;
+    }
     // TODO: handle rounding if len isn't multiple of 8
     int expected = hist_samples / 16;
     uint32_t cum = 0;
