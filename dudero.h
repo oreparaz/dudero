@@ -13,6 +13,11 @@ typedef enum {
     DUDERO_RET_KNOWN_BAD,
 } dudero_ret_t;
 
+typedef struct {
+    uint16_t hist[16]; // histogram bins, count up to 2^16 = 65,536
+    size_t hist_samples; // total number of samples processed
+} dudero_ctx_t;
+
 // Checks if the passed buffer "looks random".  Fails if the passed
 // buffer looks like "bad randomness" (obviously biased values, fixed values, etc).
 //
@@ -24,12 +29,17 @@ typedef enum {
 //
 dudero_ret_t dudero_check_buffer(const uint8_t *buf, size_t len);
 
-// you need to use either the buffer OR the stream API,
-// mixing them is bad
+// Streaming API: allows incremental processing of data
 //
-// nothing of this is thread safe
+// Usage:
+//   dudero_ctx_t ctx;
+//   dudero_stream_init(&ctx);
+//   for each byte: dudero_stream_add(&ctx, byte);
+//   result = dudero_stream_finish(&ctx);
 //
-// TODO: this is screaming passing a ctx
-dudero_ret_t dudero_stream_init(void);
-dudero_ret_t dudero_stream_add(uint8_t sample);
-dudero_ret_t dudero_stream_finish(void);
+// Notes:
+// - Thread-safe: each context is independent
+// - Maximum of 32 KB can be added before overflow check fails
+void dudero_stream_init(dudero_ctx_t *ctx);
+dudero_ret_t dudero_stream_add(dudero_ctx_t *ctx, uint8_t sample);
+dudero_ret_t dudero_stream_finish(dudero_ctx_t *ctx);
