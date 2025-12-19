@@ -6,6 +6,13 @@
 //!
 //! This is equivalent to the "Poker test" (Test 2 in AIS-31).
 //!
+//! # Testing
+//!
+//! Run the built-in tests with:
+//! ```bash
+//! rustc --test dudero.rs -o test_dudero && ./test_dudero
+//! ```
+//!
 //! # Usage
 //!
 //! ```rust
