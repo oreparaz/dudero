@@ -15,23 +15,14 @@ jobs:
           profile: minimal
           override: true
 
-      - name: Run dudero.rs tests (with std)
-        run: |
-          cd rust
-          rustc --test dudero.rs --cfg 'feature="std"' -o test_dudero
-          ./test_dudero
+      - name: Run tests
+        run: cargo test
+        working-directory: rust
 
       - name: Check no_std compilation
-        run: |
-          cd rust
-          rustc --crate-type lib dudero.rs -o libdudero.rlib
-
-      - name: Build example
-        run: |
-          cd rust
-          rustc example_dudero.rs --edition 2021 -o example
+        run: cargo check --no-default-features
+        working-directory: rust
 
       - name: Run example
-        run: |
-          cd rust
-          ./example
+        run: cargo run --example example
+        working-directory: rust
