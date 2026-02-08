@@ -16,6 +16,9 @@
 #define MAX_LEN (32768)  // 32 KB
 
 dudero_ret_t dudero_check_buffer(const uint8_t *buf, size_t len) {
+    if (buf == NULL) {
+        return DUDERO_RET_ERROR;
+    }
     if (len < MIN_LEN) {
         return DUDERO_RET_TOO_SHORT;
     }
@@ -33,12 +36,19 @@ dudero_ret_t dudero_check_buffer(const uint8_t *buf, size_t len) {
     return dudero_stream_finish(&ctx);
 }
 
-void dudero_stream_init(dudero_ctx_t *ctx) {
+dudero_ret_t dudero_stream_init(dudero_ctx_t *ctx) {
+    if (ctx == NULL) {
+        return DUDERO_RET_ERROR;
+    }
     memset(ctx->hist, 0, sizeof(ctx->hist));
     ctx->hist_samples = 0;
+    return DUDERO_RET_OK;
 }
 
 dudero_ret_t dudero_stream_add(dudero_ctx_t *ctx, uint8_t sample) {
+    if (ctx == NULL) {
+        return DUDERO_RET_ERROR;
+    }
     // Check if adding this sample would exceed maximum safe samples
     // MAX_LEN bytes * 2 nibbles/byte = MAX_LEN * 2 samples
     if (ctx->hist_samples >= MAX_LEN * 2) {
@@ -51,6 +61,9 @@ dudero_ret_t dudero_stream_add(dudero_ctx_t *ctx, uint8_t sample) {
 }
 
 dudero_ret_t dudero_stream_finish(dudero_ctx_t *ctx) {
+    if (ctx == NULL) {
+        return DUDERO_RET_ERROR;
+    }
     if (ctx->hist_samples < 16) {
         return DUDERO_RET_TOO_SHORT;
     }

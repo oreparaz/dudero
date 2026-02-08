@@ -28,6 +28,28 @@ static void fill_byte(uint8_t *buf, size_t len, uint8_t val) {
     memset(buf, val, len);
 }
 
+// === NULL pointer tests ===
+
+dudero_ret_t test_null_buffer(void) {
+    CHECK(dudero_check_buffer(NULL, 32), DUDERO_RET_ERROR);
+    return DUDERO_RET_OK;
+}
+
+dudero_ret_t test_null_stream_init(void) {
+    CHECK(dudero_stream_init(NULL), DUDERO_RET_ERROR);
+    return DUDERO_RET_OK;
+}
+
+dudero_ret_t test_null_stream_add(void) {
+    CHECK(dudero_stream_add(NULL, 0x42), DUDERO_RET_ERROR);
+    return DUDERO_RET_OK;
+}
+
+dudero_ret_t test_null_stream_finish(void) {
+    CHECK(dudero_stream_finish(NULL), DUDERO_RET_ERROR);
+    return DUDERO_RET_OK;
+}
+
 // === Error path tests ===
 
 dudero_ret_t test_too_short(void) {
@@ -340,6 +362,11 @@ typedef struct {
 } test_entry;
 
 static const test_entry all_tests[] = {
+    // NULL checks
+    {"null_buffer",             test_null_buffer},
+    {"null_stream_init",        test_null_stream_init},
+    {"null_stream_add",         test_null_stream_add},
+    {"null_stream_finish",      test_null_stream_finish},
     // Error paths
     {"too_short",               test_too_short},
     {"too_long",                test_too_long},
