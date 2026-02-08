@@ -1,0 +1,11 @@
+# Build artifacts
+*.o
+*.a
+*.rlib
+test
+
+# Rust
+rust/target/
+
+# macOS
+.DS_Store
