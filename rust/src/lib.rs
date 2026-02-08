@@ -9,15 +9,16 @@
 //! # no_std Support
 //!
 //! This library supports `no_std` environments. By default, `std` is enabled.
-//! To use in `no_std`:
-//! - When compiling manually: don't set the `std` feature
-//! - The library will work without any allocations
+//! To use in `no_std`, disable default features:
+//! ```toml
+//! dudero = { git = "https://github.com/oreparaz/dudero", subdirectory = "rust", default-features = false }
+//! ```
 //!
 //! # Testing
 //!
 //! Run the built-in tests with:
 //! ```bash
-//! rustc --test dudero.rs --cfg feature=\"std\" -o test_dudero && ./test_dudero
+//! cargo test
 //! ```
 //!
 //! # Usage
@@ -25,7 +26,7 @@
 //! ```rust
 //! use dudero::{check_buffer, DuderoResult};
 //!
-//! let data: Vec<u8> = (0..64).map(|_| rand::random()).collect();
+//! let data: Vec<u8> = (0..64).collect();
 //! match check_buffer(&data) {
 //!     Ok(DuderoResult::Ok) => println!("Looks random!"),
 //!     Ok(DuderoResult::BadRandomness) => println!("Bad randomness detected"),
@@ -38,11 +39,12 @@
 //! ```rust
 //! use dudero::{DuderoContext, DuderoResult};
 //!
+//! let data = vec![0x42u8; 32];
 //! let mut ctx = DuderoContext::new();
 //! for byte in data.iter() {
-//!     ctx.add(*byte)?;
+//!     ctx.add(*byte).unwrap();
 //! }
-//! let result = ctx.finish()?;
+//! let result = ctx.finish().unwrap();
 //! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]

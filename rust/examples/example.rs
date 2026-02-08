@@ -1,14 +1,6 @@
-// Example usage of dudero.rs
+// Example usage of dudero
 //
-// Option 1 - Compile both files together:
-//   rustc example_dudero.rs --edition 2021 -o example
-//   (Make sure dudero.rs is in the same directory)
-//
-// Option 2 - Include dudero.rs inline:
-//   Uncomment the line below and comment out "mod dudero;"
-//   // include!("dudero.rs");
-
-mod dudero;
+// Run with: cargo run --example example
 
 use dudero::{check_buffer, DuderoContext, DuderoResult};
 

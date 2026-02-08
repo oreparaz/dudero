@@ -1,0 +1,10 @@
+[package]
+name = "dudero"
+version = "0.1.0"
+edition = "2021"
+description = "dude, is my randomness OK?"
+license = "MIT"
+
+[features]
+default = ["std"]
+std = []
