@@ -43,6 +43,6 @@ dudero_ret_t dudero_check_buffer(const uint8_t *buf, size_t len);
 // Notes:
 // - Thread-safe: each context is independent
 // - Maximum of 32 KB can be added before overflow check fails
-void dudero_stream_init(dudero_ctx_t *ctx);
+dudero_ret_t dudero_stream_init(dudero_ctx_t *ctx);
 dudero_ret_t dudero_stream_add(dudero_ctx_t *ctx, uint8_t sample);
 dudero_ret_t dudero_stream_finish(dudero_ctx_t *ctx);
