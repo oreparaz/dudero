@@ -12,4 +12,4 @@ $(objects): $(wildcard *.h)
 
 .PHONY: clean
 clean:
-	$(RM) *.o test
+	$(RM) *.o randombytes/randombytes.o test
