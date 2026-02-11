@@ -58,12 +58,8 @@ use core::iter::{Extend, FromIterator};
 /// Minimum buffer length (16 bytes)
 pub const MIN_LEN: usize = 16;
 
-/// Maximum safe length to prevent overflow of u16 histogram bins.
-/// Each byte produces 2 nibbles. With perfect uniform distribution,
-/// each bin gets len*2/16 = len/8 samples. To keep bins < 2^16:
-/// len/8 < 2^16 => len < 2^19 = 524,288 bytes.
-/// Use a conservative limit to handle non-uniform data.
-pub const MAX_LEN: usize = 32768; // 32 KB
+/// Maximum buffer length (32 KB)
+pub const MAX_LEN: usize = 32768;
 
 /// Number of histogram bins (16 possible nibble values: 0x0 to 0xF)
 const NUM_BINS: usize = 16;
@@ -104,8 +100,8 @@ impl std::error::Error for DuderoError {}
 /// Context for streaming API
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DuderoContext {
-    /// Histogram bins, count up to 2^16 = 65,536
-    hist: [u16; NUM_BINS],
+    /// Histogram bins
+    hist: [u32; NUM_BINS],
     /// Total number of samples processed
     hist_samples: usize,
 }
