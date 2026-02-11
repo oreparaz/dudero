@@ -8,12 +8,8 @@
 #include <string.h>
 
 #define MIN_LEN (16)
-// Maximum safe length to prevent overflow of uint16_t histogram bins.
-// Each byte produces 2 nibbles. With perfect uniform distribution,
-// each bin gets len*2/16 = len/8 samples. To keep bins < 2^16:
-// len/8 < 2^16 => len < 2^19 = 524,288 bytes.
-// Use a conservative limit to handle non-uniform data.
-#define MAX_LEN (32768)  // 32 KB
+// Maximum buffer length (32 KB)
+#define MAX_LEN (32768)
 
 dudero_ret_t dudero_check_buffer(const uint8_t *buf, size_t len) {
     if (buf == NULL) {

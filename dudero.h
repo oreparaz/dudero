@@ -17,7 +17,7 @@ typedef enum {
 } dudero_ret_t;
 
 typedef struct {
-    uint16_t hist[16]; // histogram bins, count up to 2^16 = 65,536
+    uint32_t hist[16]; // histogram bins
     size_t hist_samples; // total number of samples processed
 } dudero_ctx_t;
 
